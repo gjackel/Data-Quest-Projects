@@ -1,0 +1,69 @@
+library(readr)
+library(dplyr)
+library(tibble)
+library(ggplot2)
+library(purrr)
+library(tidyr)
+
+data_frame <- read_csv("C:\\Users\\jackegr\\Downloads\\forestfires.csv")
+
+view(data_frame)
+head(data_frame)
+
+#During which months are forest fires most common?
+ggplot(data=data_frame)+
+  aes(x=day)+
+  geom_bar(fill="blue")+
+  labs(title="Fires on days of the week", x="Day", y="Number of fires")+
+  theme_classic()
+
+ggplot(data=data_frame)+
+  aes(x=month)+
+  geom_bar()+
+  labs(title="Fires by month", x="Month", y="Number of fires")+
+  theme(panel.background = element_rect(fill="white"))
+
+#reorder the axis - names have to be the same or will result in NA
+data_frame <- data_frame %>%
+  mutate(month = factor(month, levels = c("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"))) %>% 
+  mutate(day= factor(day, levels=c("sun","mon","tue","wed","thu","fri","sat")))
+
+#On which days of the week are forest fires most common? Gives a distribution table
+months <- data_frame %>% 
+  group_by(month) %>% 
+  summarise(number=n())
+
+days <- data_frame %>% 
+  group_by(day) %>% 
+  summarise(number=NROW(day))
+            
+#create function to make boxplots, aes needs to be a string (otherwise it is only reading the data as one variable)
+boxplots <- function(x,y){
+  ggplot(data=data_frame)+
+    aes_string(x=x,y=y)+
+    geom_boxplot()+
+    theme_classic()
+}
+#check that my function works by entering in an x and y variable
+boxplots(x="month",y="FFMC")
+
+#select x and y variable name
+y_var <- names(data_frame)[5:11]
+x_var <- names(data_frame)[3:4]
+#name the x and y vectors 
+y_var <- set_names(y_var)
+x_var <- set_names(x_var)
+
+#loop through 1 vector (FFMC)
+by_month <- map(x_var, ~boxplots(.x, "FFMC"))
+#loop through both vectors (month and days for all dependent variables)
+all_plot <- map(y_var, ~map(x_var, boxplots, y=.x))
+#check a few plots to see what they look like
+all_plot$day$DMC
+all_plot$month$FFMC
+
+#print outputs to a PDF
+pdf("all plots.pdf")
+all_plot
+dev.off()
+
